@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+		<style>
+			body {
+				font-family: system-ui, sans-serif;
+				background: var(--surface-0);
+				color: var(--text-primary);
+				padding: 16px;
+				max-width: 680px;
+				margin: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<style>
+			.card {
+				background: var(--surface-1);
+				border: 0.5px solid var(--border);
+				border-radius: 12px;
+				padding: 1rem 1.25rem;
+				margin-bottom: 12px;
+			}
+			.row {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 14px;
+			}
+			.row label {
+				font-size: 13px;
+				color: var(--text-secondary);
+				min-width: 130px;
+			}
+			.row input[type="range"] {
+				flex: 1;
+			}
+			.row .val {
+				font-size: 14px;
+				font-weight: 500;
+				min-width: 52px;
+				text-align: right;
+			}
+			.result-grid {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 10px;
+				margin-top: 4px;
+			}
+			.metric {
+				background: var(--surface-2);
+				border: 0.5px solid var(--border);
+				border-radius: 8px;
+				padding: 10px 14px;
+			}
+			.metric .label {
+				font-size: 12px;
+				color: var(--text-muted);
+				margin-bottom: 4px;
+			}
+			.metric .value {
+				font-size: 20px;
+				font-weight: 500;
+				color: var(--text-primary);
+			}
+			.metric .sub {
+				font-size: 12px;
+				color: var(--text-secondary);
+				margin-top: 2px;
+			}
+			.warn {
+				font-size: 12px;
+				color: var(--text-warning);
+				margin-top: 6px;
+				display: none;
+			}
+		</style>
+		<h2 class="sr-only">
+			LED resistor calculator: adjust supply voltage, LED voltage, and current
+			to find the required resistor value
+		</h2>
+
+		<div class="card">
+			<div class="row">
+				<label>Supply voltage</label>
+				<input
+					type="range"
+					id="vs"
+					min="2"
+					max="24"
+					step="0.5"
+					value="7"
+					oninput="calc()"
+				/>
+				<span class="val" id="vs-v">7 V</span>
+			</div>
+			<div class="row">
+				<label>LED forward voltage</label>
+				<input
+					type="range"
+					id="vf"
+					min="1.5"
+					max="5"
+					step="0.1"
+					value="3"
+					oninput="calc()"
+				/>
+				<span class="val" id="vf-v">3.0 V</span>
+			</div>
+			<div class="row" style="margin-bottom: 0">
+				<label>LED current</label>
+				<input
+					type="range"
+					id="imax"
+					min="1"
+					max="30"
+					step="1"
+					value="20"
+					oninput="calc()"
+				/>
+				<span class="val" id="i-v">20 mA</span>
+			</div>
+		</div>
+
+		<div class="result-grid">
+			<div class="metric">
+				<div class="label">Resistor needed</div>
+				<div class="value" id="r-exact">200 Ω</div>
+				<div class="sub" id="r-std">Nearest standard: 200 Ω</div>
+			</div>
+			<div class="metric">
+				<div class="label">Voltage across resistor</div>
+				<div class="value" id="v-drop">4.0 V</div>
+				<div class="sub">= supply − LED forward V</div>
+			</div>
+			<div class="metric">
+				<div class="label">Power dissipated</div>
+				<div class="value" id="p-res">80 mW</div>
+				<div class="sub" id="p-note">Use ¼ W resistor</div>
+			</div>
+			<div class="metric">
+				<div class="label">Formula</div>
+				<div
+					class="value"
+					style="font-size: 13px; line-height: 1.5; padding-top: 4px"
+					id="formula"
+				>
+					R = (7−3) / 0.02<br />= 200 Ω
+				</div>
+				<div class="sub"></div>
+			</div>
+		</div>
+		<div class="warn" id="warn">
+			⚠ Supply voltage must be higher than LED forward voltage.
+		</div>
+
+		<svg width="100%" viewBox="0 0 680 160" style="margin-top: 16px" role="img">
+			<title>Simple LED circuit diagram</title>
+			<desc>
+				A circuit showing a power supply connected in series with a resistor and
+				an LED
+			</desc>
+			<defs>
+				<marker
+					id="arrow"
+					viewBox="0 0 10 10"
+					refX="8"
+					refY="5"
+					markerWidth="6"
+					markerHeight="6"
+					orient="auto-start-reverse"
+				>
+					<path
+						d="M2 1L8 5L2 9"
+						fill="none"
+						stroke="context-stroke"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</marker>
+			</defs>
+			<!-- Wire top -->
+			<line
+				x1="80"
+				y1="50"
+				x2="600"
+				y2="50"
+				stroke="var(--text-secondary)"
+				stroke-width="2"
+			/>
+			<!-- Wire bottom -->
+			<line
+				x1="80"
+				y1="120"
+				x2="600"
+				y2="120"
+				stroke="var(--text-secondary)"
+				stroke-width="2"
+			/>
+			<!-- Left side (supply) -->
+			<line
+				x1="80"
+				y1="50"
+				x2="80"
+				y2="120"
+				stroke="var(--text-secondary)"
+				stroke-width="2"
+			/>
+			<!-- Right side (close circuit) -->
+			<line
+				x1="600"
+				y1="50"
+				x2="600"
+				y2="120"
+				stroke="var(--text-secondary)"
+				stroke-width="2"
+			/>
+
+			<!-- Supply symbol -->
+			<line
+				x1="68"
+				y1="78"
+				x2="92"
+				y2="78"
+				stroke="var(--text-primary)"
+				stroke-width="2.5"
+			/>
+			<line
+				x1="73"
+				y1="88"
+				x2="87"
+				y2="88"
+				stroke="var(--text-primary)"
+				stroke-width="1.5"
+			/>
+			<text
+				class="ts"
+				x="80"
+				y="140"
+				text-anchor="middle"
+				fill="var(--text-secondary)"
+			>
+				Supply
+			</text>
+			<text
+				class="ts"
+				x="80"
+				y="152"
+				text-anchor="middle"
+				fill="var(--text-secondary)"
+				id="svg-vs"
+			>
+				7 V
+			</text>
+
+			<!-- Resistor (zig-zag) -->
+			<polyline
+				points="210,50 220,50 225,38 233,62 241,38 249,62 257,38 265,62 270,50 280,50"
+				fill="none"
+				stroke="var(--text-primary)"
+				stroke-width="2"
+				stroke-linejoin="round"
+			/>
+			<text
+				class="ts"
+				x="245"
+				y="30"
+				text-anchor="middle"
+				fill="var(--text-secondary)"
+			>
+				Resistor
+			</text>
+			<text
+				class="ts"
+				x="245"
+				y="18"
+				text-anchor="middle"
+				fill="var(--text-accent)"
+				id="svg-r"
+			>
+				200 Ω
+			</text>
+
+			<!-- LED symbol -->
+			<polygon
+				points="440,35 440,65 468,50"
+				fill="var(--bg-accent)"
+				stroke="var(--text-accent)"
+				stroke-width="1.5"
+			/>
+			<line
+				x1="468"
+				y1="35"
+				x2="468"
+				y2="65"
+				stroke="var(--text-accent)"
+				stroke-width="2"
+			/>
+			<line
+				x1="420"
+				y1="50"
+				x2="440"
+				y2="50"
+				stroke="var(--text-secondary)"
+				stroke-width="2"
+			/>
+			<line
+				x1="468"
+				y1="50"
+				x2="490"
+				y2="50"
+				stroke="var(--text-secondary)"
+				stroke-width="2"
+			/>
+			<!-- Light rays -->
+			<line
+				x1="472"
+				y1="38"
+				x2="482"
+				y2="28"
+				stroke="var(--text-accent)"
+				stroke-width="1.5"
+				stroke-linecap="round"
+			/>
+			<line
+				x1="480"
+				y1="44"
+				x2="492"
+				y2="36"
+				stroke="var(--text-accent)"
+				stroke-width="1.5"
+				stroke-linecap="round"
+			/>
+			<text
+				class="ts"
+				x="454"
+				y="90"
+				text-anchor="middle"
+				fill="var(--text-secondary)"
+			>
+				LED
+			</text>
+			<text
+				class="ts"
+				x="454"
+				y="102"
+				text-anchor="middle"
+				fill="var(--text-accent)"
+				id="svg-vf"
+			>
+				3.0 V
+			</text>
+
+			<!-- Current arrow -->
+			<line
+				x1="330"
+				y1="50"
+				x2="390"
+				y2="50"
+				stroke="var(--text-muted)"
+				stroke-width="1.5"
+				marker-end="url(#arrow)"
+			/>
+			<text
+				class="ts"
+				x="360"
+				y="44"
+				text-anchor="middle"
+				fill="var(--text-muted)"
+				id="svg-i"
+			>
+				20 mA
+			</text>
+		</svg>
+
+		<script>
+			const E12 = [10, 12, 15, 18, 22, 27, 33, 39, 47, 56, 68, 82];
+			function nearestE12(r) {
+				if (r <= 0) return 0;
+				const exp = Math.floor(Math.log10(r));
+				const base = Math.pow(10, exp);
+				const norm = r / base;
+				let best = E12[0],
+					bestDiff = Math.abs(norm - E12[0]);
+				for (const v of E12) {
+					const d = Math.abs(norm - v);
+					if (d < bestDiff) {
+						bestDiff = d;
+						best = v;
+					}
+				}
+				const result = best * base;
+				return result >= 1000
+					? (result / 1000).toFixed(result % 1000 === 0 ? 0 : 1) + " kΩ"
+					: Math.round(result) + " Ω";
+			}
+			function fmt(r) {
+				if (r >= 1000)
+					return (r / 1000).toFixed(r % 1000 === 0 ? 1 : 2) + " kΩ";
+				return Math.round(r) + " Ω";
+			}
+			function calc() {
+				const vs = parseFloat(document.getElementById("vs").value);
+				const vf = parseFloat(document.getElementById("vf").value);
+				const imA = parseFloat(document.getElementById("imax").value);
+				const iA = imA / 1000;
+
+				document.getElementById("vs-v").textContent = vs + " V";
+				document.getElementById("vf-v").textContent = vf.toFixed(1) + " V";
+				document.getElementById("i-v").textContent = imA + " mA";
+				document.getElementById("svg-vs").textContent = vs + " V";
+				document.getElementById("svg-vf").textContent = vf.toFixed(1) + " V";
+				document.getElementById("svg-i").textContent = imA + " mA";
+
+				const warn = document.getElementById("warn");
+				if (vs <= vf) {
+					warn.style.display = "block";
+					document.getElementById("r-exact").textContent = "—";
+					document.getElementById("r-std").textContent = "—";
+					document.getElementById("v-drop").textContent = "—";
+					document.getElementById("p-res").textContent = "—";
+					document.getElementById("formula").textContent =
+						"Supply must exceed LED voltage";
+					document.getElementById("svg-r").textContent = "—";
+					return;
+				}
+				warn.style.display = "none";
+
+				const vDrop = vs - vf;
+				const r = vDrop / iA;
+				const pMW = vDrop * iA * 1000;
+
+				document.getElementById("r-exact").textContent = fmt(r);
+				document.getElementById("r-std").textContent =
+					"Nearest E12: " + nearestE12(r);
+				document.getElementById("v-drop").textContent = vDrop.toFixed(1) + " V";
+				document.getElementById("p-res").textContent = Math.round(pMW) + " mW";
+				document.getElementById("svg-r").textContent = fmt(r);
+
+				const pNote =
+					pMW < 250
+						? "Use ¼ W resistor"
+						: pMW < 500
+							? "Use ½ W resistor"
+							: "Use 1 W+ resistor";
+				document.getElementById("p-note").textContent = pNote;
+
+				document.getElementById("formula").innerHTML =
+					`R = (${vs}−${vf.toFixed(1)}) / ${iA.toFixed(3)}<br>= ${fmt(r)}`;
+			}
+			calc();
+		</script>
+	</body>
+</html>
