@@ -1,0 +1,157 @@
+
+<h2 class="sr-only">Watt's Law interactive calculator — solve for power, voltage, or current</h2>
+
+<div style="padding:1rem 0">
+  <div style="display:flex;gap:8px;margin-bottom:1.5rem;border-bottom:0.5px solid var(--border);padding-bottom:1rem">
+    <button id="btn-p" onclick="setMode('P')" style="flex:1;padding:8px;border-radius:var(--radius);border:0.5px solid var(--border-accent);background:var(--bg-accent);color:var(--text-accent);font-size:14px;cursor:pointer;font-weight:500">Solve for P</button>
+    <button id="btn-v" onclick="setMode('V')" style="flex:1;padding:8px;border-radius:var(--radius);border:0.5px solid var(--border);background:transparent;color:var(--text-secondary);font-size:14px;cursor:pointer">Solve for V</button>
+    <button id="btn-i" onclick="setMode('I')" style="flex:1;padding:8px;border-radius:var(--radius);border:0.5px solid var(--border);background:transparent;color:var(--text-secondary);font-size:14px;cursor:pointer">Solve for I</button>
+  </div>
+
+  <div id="formula-display" style="text-align:center;font-size:20px;font-weight:500;margin-bottom:1.5rem;color:var(--text-primary);letter-spacing:0.02em">P = V × I</div>
+
+  <div id="inputs" style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.5rem"></div>
+
+  <div id="result-card" style="background:var(--bg-accent);border:0.5px solid var(--border-accent);border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-size:13px;color:var(--text-accent);margin-bottom:2px" id="result-label">Power (P)</div>
+      <div style="font-size:28px;font-weight:500;color:var(--text-accent)" id="result-value">—</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:12px;color:var(--text-secondary)" id="formula-used">P = V × I</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="hint-text">Enter values above</div>
+    </div>
+  </div>
+
+  <div id="lab-insight" style="display:none;margin-top:1rem;background:var(--surface-1);border-left:3px solid var(--border-accent);border-radius:0 var(--radius) var(--radius) 0;padding:0.75rem 1rem;font-size:13px;color:var(--text-secondary);line-height:1.6"></div>
+
+  <div style="margin-top:1.25rem;border-top:0.5px solid var(--border);padding-top:1rem">
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Quick presets</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="loadPreset(12,4.5,'P')" style="font-size:12px;padding:4px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer">12V, 4.5A CPU</button>
+      <button onclick="loadPreset(5,0.5,'P')" style="font-size:12px;padding:4px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer">5V, 0.5A USB</button>
+      <button onclick="loadPreset(3.3,2,'P')" style="font-size:12px;padding:4px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer">3.3V, 2A logic</button>
+      <button onclick="loadPreset(65,12,'I')" style="font-size:12px;padding:4px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer">65W / 12V fuse</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let mode = 'P';
+const formulas = {
+  P: { label:'Power (P)', unit:'W', display:'P = V × I', used:'V × I', inputs:[{id:'v',label:'Voltage (V)',unit:'V'},{id:'i',label:'Current (I)',unit:'A'}] },
+  V: { label:'Voltage (V)', unit:'V', display:'V = P ÷ I', used:'P ÷ I', inputs:[{id:'p',label:'Power (P)',unit:'W'},{id:'i',label:'Current (I)',unit:'A'}] },
+  I: { label:'Current (I)', unit:'A', display:'I = P ÷ V', used:'P ÷ V', inputs:[{id:'p',label:'Power (P)',unit:'W'},{id:'v',label:'Voltage (V)',unit:'V'}] }
+};
+
+function labInsight(mode, result) {
+  if (isNaN(result) || result <= 0) return null;
+  if (mode === 'P') {
+    if (result < 1) return 'Very low power draw — typical of standby logic or small sensors.';
+    if (result < 5) return 'Low-power component — USB device or small peripheral range.';
+    if (result < 25) return 'Moderate draw — consistent with RAM, SSDs, or laptop CPUs at idle.';
+    if (result < 65) return 'Medium-power component — a typical mid-range CPU or GPU at light load.';
+    if (result < 150) return 'High draw — expect significant heat; ensure thermal solution and rail capacity.';
+    return 'Very high power — verify PSU rating and check for adequate cooling and wire gauge.';
+  }
+  if (mode === 'I') {
+    if (result < 0.1) return 'Under 100 mA — a logic signal or indicator LED, very safe.';
+    if (result < 1) return 'Sub-1 A range — fine for standard board traces and connectors.';
+    if (result < 5) return 'Standard current range — check connector and fuse ratings.';
+    if (result < 15) return 'High current — consider trace width, connector ampacity, and fuse sizing.';
+    return 'Very high current — use appropriately rated wiring; measure trace temperature under load.';
+  }
+  if (mode === 'V') {
+    if (result < 1) return 'Sub-1 V — typical of low-voltage logic rails on modern CPUs or GPUs.';
+    if (result < 5) return 'Low-voltage rail — matches 3.3 V or 1.8 V logic domains.';
+    if (result < 13) return 'Standard PC rail — matches 5 V or 12 V ATX domains.';
+    return 'High voltage — exercise caution; verify insulation ratings on test leads.';
+  }
+}
+
+function compute(vals) {
+  const v = parseFloat(vals.v), i = parseFloat(vals.i), p = parseFloat(vals.p);
+  if (mode === 'P' && !isNaN(v) && !isNaN(i)) return v * i;
+  if (mode === 'V' && !isNaN(p) && !isNaN(i) && i !== 0) return p / i;
+  if (mode === 'I' && !isNaN(p) && !isNaN(v) && v !== 0) return p / v;
+  return NaN;
+}
+
+function getVals() {
+  const vals = {};
+  document.querySelectorAll('#inputs input').forEach(el => { vals[el.dataset.key] = el.value; });
+  return vals;
+}
+
+function round(n, d=2) { return Math.round(n * Math.pow(10,d)) / Math.pow(10,d); }
+
+function updateResult() {
+  const result = compute(getVals());
+  const cfg = formulas[mode];
+  const el = document.getElementById('result-value');
+  const hint = document.getElementById('hint-text');
+  const insight = document.getElementById('lab-insight');
+  if (isNaN(result)) {
+    el.textContent = '—';
+    hint.textContent = 'Enter values above';
+    insight.style.display = 'none';
+  } else {
+    el.textContent = round(result) + ' ' + cfg.unit;
+    hint.textContent = cfg.used + ' = ' + round(result) + ' ' + cfg.unit;
+    const msg = labInsight(mode, result);
+    if (msg) {
+      insight.textContent = '⚡ Lab note: ' + msg;
+      insight.style.display = 'block';
+    } else {
+      insight.style.display = 'none';
+    }
+  }
+}
+
+function renderInputs() {
+  const cfg = formulas[mode];
+  const container = document.getElementById('inputs');
+  container.innerHTML = '';
+  cfg.inputs.forEach(inp => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--surface-1);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 14px';
+    row.innerHTML = `<label style="font-size:13px;color:var(--text-secondary);min-width:110px">${inp.label}</label><input data-key="${inp.id}" type="number" min="0" step="any" placeholder="0" style="flex:1;background:transparent;border:none;font-size:16px;font-weight:500;color:var(--text-primary);outline:none;text-align:right" /><span style="font-size:13px;color:var(--text-muted);min-width:20px">${inp.unit}</span>`;
+    row.querySelector('input').addEventListener('input', updateResult);
+    container.appendChild(row);
+  });
+}
+
+function setMode(m) {
+  mode = m;
+  ['P','V','I'].forEach(x => {
+    const btn = document.getElementById('btn-'+x.toLowerCase());
+    if (x === m) {
+      btn.style.background = 'var(--bg-accent)';
+      btn.style.color = 'var(--text-accent)';
+      btn.style.border = '0.5px solid var(--border-accent)';
+      btn.style.fontWeight = '500';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--text-secondary)';
+      btn.style.border = '0.5px solid var(--border)';
+      btn.style.fontWeight = '400';
+    }
+  });
+  const cfg = formulas[m];
+  document.getElementById('formula-display').textContent = cfg.display;
+  document.getElementById('result-label').textContent = cfg.label;
+  document.getElementById('formula-used').textContent = cfg.display;
+  renderInputs();
+  updateResult();
+}
+
+function loadPreset(a, b, m) {
+  setMode(m);
+  const inputs = document.querySelectorAll('#inputs input');
+  inputs[0].value = a;
+  inputs[1].value = b;
+  updateResult();
+}
+
+setMode('P');
+</script>
